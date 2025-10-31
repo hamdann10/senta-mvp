@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import Navbar from "./components/navbar";
 import "./globals.css";
 import { Inter } from "next/font/google";
@@ -9,7 +10,7 @@ export const metadata = {
   description: "Market Sentiment Analysis for Indian Stocks",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className={inter.className}><Navbar/>{children}</body>
