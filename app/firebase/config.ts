@@ -3,14 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBmmFTu0pPm-vGmLopwrNIBg2hV05jeCb4",
-    authDomain: "senta-app.firebaseapp.com",
-    projectId: "senta-app",
-    storageBucket: "senta-app.firebasestorage.app",
-    messagingSenderId: "23135430189",
-    appId: "1:23135430189:web:5a64776d7089b37b263aa4"
-  };
-  
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
