@@ -7,13 +7,17 @@ type SentimentLabel = {
 
 type HuggingFaceResponse = SentimentLabel[][];
 
+type RequestBody = {
+  headlines: string[];
+};
+
 export async function POST(req: Request) {
   try {
     // ✅ Properly type request body
-    const body = (await req.json()) as { headlines: string[] };
+    const body = (await req.json()) as RequestBody;
     const { headlines } = body;
 
-    if (!headlines || headlines.length === 0) {
+    if (!Array.isArray(headlines) || headlines.length === 0) {
       return NextResponse.json(
         { error: "No headlines provided" },
         { status: 400 }
@@ -44,13 +48,22 @@ export async function POST(req: Request) {
 
         const data = (await res.json()) as HuggingFaceResponse;
 
-        // 🛡️ Handle unexpected API response
-        if (!Array.isArray(data) || !Array.isArray(data[0])) {
+        // 🛡️ Handle unexpected API response safely
+        if (
+          !Array.isArray(data) ||
+          data.length === 0 ||
+          !Array.isArray(data[0]) ||
+          data[0].length === 0
+        ) {
           console.warn("Unexpected Hugging Face response:", data);
-          return { headline, sentiment: "unknown", raw: data };
+          return {
+            headline,
+            sentiment: "unknown",
+            confidence: 0,
+          };
         }
 
-        // ✅ Find highest confidence label
+        // ✅ Find label with highest confidence
         const topLabel = data[0].reduce(
           (prev, curr) => (curr.score > prev.score ? curr : prev),
           data[0][0]
