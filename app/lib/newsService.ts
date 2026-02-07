@@ -1,89 +1,66 @@
 // app/lib/newsService.ts
 
-const FINANCIAL_TERMS = [
-  "stock",
-  "stocks",
-  "share",
-  "shares",
-  "market",
-  "markets",
-  "investor",
-  "investors",
-  "earnings",
-  "results",
-  "profit",
-  "loss",
-  "revenue",
-  "quarter",
-  "q1",
-  "q2",
-  "q3",
-  "q4",
-  "nse",
-  "bse",
-  "exchange",
-  "price",
-  "valuation",
-  "dividend",
-  "ipo",
-  "buy",
-  "sell",
-  "trading",
-  "rally",
-  "fall",
-  "surge",
-  "plunge",
-];
-
-/**
- * Checks whether a news article is financially relevant
- * to a given stock (generic, scalable logic)
- */
-function isMarketRelevant(article: any, stock: string): boolean {
-  const text = `${article.title} ${article.description || ""}`.toLowerCase();
-  const stockLower = stock.toLowerCase();
-
-  const mentionsStock = text.includes(stockLower);
-  const hasFinancialContext = FINANCIAL_TERMS.some(term =>
-    text.includes(term)
-  );
-
-  return mentionsStock && hasFinancialContext;
+interface Article {
+  title: string;
+  description: string;
+  url: string;
+  source: { name: string };
+  publishedAt: string;
 }
 
-export async function fetchNews(stock: string, days: number = 1) {
-  const apiKey = process.env.NEXT_PUBLIC_NEWS_API_KEY;
+const FINANCE_SITES = [
+  "moneycontrol.com",
+  "economictimes.indiatimes.com",
+  "business-standard.com",
+  "livemint.com",
+  "financialexpress.com",
+];
 
-  const currentDate = new Date();
-  const fromDate = new Date(currentDate);
-  fromDate.setDate(currentDate.getDate() - days);
+export async function fetchNews(stock: string, days: number = 1): Promise<Article[]> {
+  const apiKey = process.env.NEXT_PUBLIC_GNEWS_API_KEY;
 
-  const url = `https://newsapi.org/v2/everything?q="${stock}"&from=${
-    fromDate.toISOString().split("T")[0]
-  }&sortBy=publishedAt&language=en&pageSize=50&apiKey=${apiKey}`;
+  if (!apiKey) {
+    console.error("❌ GNEWS API KEY MISSING");
+    return [];
+  }
+
+  // 🔥 Finance-focused query
+  const baseQuery = `"${stock}" AND (stock OR shares OR earnings OR results OR NSE OR BSE)`;
+
+  // 🔥 Restrict to Indian finance sites (NO scraping)
+  const siteFilter = FINANCE_SITES.map(site => `site:${site}`).join(" OR ");
+
+  const finalQuery = `${baseQuery} (${siteFilter})`;
+
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - days);
+
+  const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(
+    finalQuery
+  )}&lang=en&country=in&from=${fromDate.toISOString()}&max=20&token=${apiKey}`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: "no-store" });
     const data = await res.json();
 
-    if (data.status !== "ok") {
-      throw new Error(data.message || "Failed to fetch news");
+    if (!data.articles || !Array.isArray(data.articles)) {
+      console.warn("⚠️ No articles from GNews:", data);
+      return [];
     }
 
-    const articles = data.articles || [];
-
-    // 🔍 FILTER OUT NON-MARKET / GENERIC ARTICLES
-    const relevantArticles = articles.filter((article: any) =>
-      isMarketRelevant(article, stock)
-    );
-
     console.log(
-      `📰 News filtered for ${stock}: ${relevantArticles.length}/${articles.length} relevant`
+      `📰 GNews (${stock}): ${data.articles.length} articles fetched`
     );
 
-    return relevantArticles;
+    return data.articles.map((a: any) => ({
+      title: a.title,
+      description: a.description || "",
+      url: a.url,
+      source: a.source,
+      publishedAt: a.publishedAt,
+    }));
   } catch (error) {
-    console.error("❌ Error fetching news:", error);
+    console.error("❌ GNews fetch failed:", error);
     return [];
   }
 }
