@@ -22,7 +22,7 @@ export async function addUserStock(uid: string, stock: string) {
   if (snap.exists()) {
     const current = snap.data().savedStocks || [];
     if (current.includes(stock)) throw new Error("Already added");
-    if (current.length >= 5) throw new Error("You can only save 5 stocks");
+    if (current.length >= 2) throw new Error("You can only save 2 stocks");
     await updateDoc(ref, { savedStocks: arrayUnion(stock) });
   } else {
     await setDoc(ref, { savedStocks: [stock] });
@@ -32,4 +32,9 @@ export async function addUserStock(uid: string, stock: string) {
 export async function removeUserStock(uid: string, stock: string) {
   const ref = doc(db, "users", uid);
   await updateDoc(ref, { savedStocks: arrayRemove(stock) });
+}
+
+export async function saveWhatsappNumber(uid: string, whatsapp: string) {
+  const ref = doc(db, "users", uid);
+  await updateDoc(ref, { whatsapp });
 }

@@ -3,6 +3,8 @@ import AuthGuard from "../components/AuthGuard";
 import SavedStocks from "../components/SavedStocks";
 import NewsPreview from "../components/NewsPreview";
 import { useState } from "react";
+import StockSelector from "../components/StockSelector";
+
 
 export default function DashboardPage() {
   const [selectedStock, setSelectedStock] = useState("RELIANCE");
@@ -12,8 +14,8 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-gray-950 text-white p-6">
         <h1 className="text-3xl font-bold mb-6">Market Sentiment Dashboard</h1>
 
-        {/* Saved Stocks Section */}
-        <SavedStocks onSelect={(stock) => setSelectedStock(stock)} />
+       <StockSelector selected={selectedStock} onSelect={setSelectedStock}/>
+
 
         {/* Selected Stock News & Sentiment */}
         <p className="text-gray-400 mb-4">

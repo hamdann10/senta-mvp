@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { auth } from "../firebase/config";
-import { addUserStock, getUserStocks, removeUserStock } from "../lib/stockService";
+import {
+  addUserStock,
+  getUserStocks,
+  removeUserStock,
+} from "../lib/stockService";
 import { onAuthStateChanged } from "firebase/auth";
 
-export default function SavedStocks({ onSelect }: { onSelect: (stock: string) => void }) {
+export default function SavedStocks() {
   const [uid, setUid] = useState<string | null>(null);
   const [stocks, setStocks] = useState<string[]>([]);
   const [newStock, setNewStock] = useState("");
@@ -47,8 +51,8 @@ export default function SavedStocks({ onSelect }: { onSelect: (stock: string) =>
   if (loading) return <p className="text-gray-400">Loading saved stocks...</p>;
 
   return (
-    <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl mb-6">
-      <h2 className="text-2xl font-semibold mb-4">Your Saved Stocks</h2>
+    <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl">
+      <h2 className="text-2xl font-semibold mb-4">Manage Your Stocks</h2>
 
       <div className="flex flex-wrap gap-2 mb-4">
         {stocks.length === 0 ? (
@@ -59,12 +63,7 @@ export default function SavedStocks({ onSelect }: { onSelect: (stock: string) =>
               key={s}
               className="flex items-center gap-2 bg-gray-800 px-3 py-2 rounded-lg"
             >
-              <button
-                onClick={() => onSelect(s)}
-                className="text-blue-400 hover:underline"
-              >
-                {s}
-              </button>
+              <span className="text-blue-400">{s}</span>
               <button
                 onClick={() => handleRemove(s)}
                 className="text-red-400 hover:text-red-500"
