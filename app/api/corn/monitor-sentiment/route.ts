@@ -2,19 +2,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { db } from "../../firebase/config";
+import { db } from "../../../firebase/config";
 import { collection, getDocs } from "firebase/firestore";
 import nodemailer from "nodemailer";
 import { fetchRSSNews } from "@/app/lib/rssNewsService";
 
 /* ================= CONFIG ================= */
 
-// Signal-based thresholds (tuned)
+// Alert thresholds (impact-weighted)
 const NEGATIVE_SCORE_THRESHOLD = -0.35;
 const POSITIVE_SCORE_THRESHOLD = 0.35;
 
-// Timeframes cron will evaluate
-const TIMEFRAMES = [1, 7, 30]; // days
+// 🔥 ALERT WINDOW (ONLY SHORT TERM)
+const ALERT_DAYS = 1;
 
 /* ================= EMAIL SETUP ================= */
 
@@ -69,10 +69,8 @@ async function analyzeSentiment(
     weightSum += weight;
   });
 
-  const averageScore = weightSum === 0 ? 0 : weightedScore / weightSum;
-
   return {
-    averageScore,
+    averageScore: weightSum === 0 ? 0 : weightedScore / weightSum,
     articles: headlines.length,
   };
 }
@@ -81,10 +79,10 @@ async function analyzeSentiment(
 
 export async function GET() {
   try {
-    console.log("🚀 CRON: Sentiment monitor started");
+    console.log("⏰ CRON START: 30-min sentiment scan");
 
     const usersSnap = await getDocs(collection(db, "users"));
-    console.log("👥 Users:", usersSnap.docs.length);
+    console.log("👥 Users found:", usersSnap.docs.length);
 
     for (const userDoc of usersSnap.docs) {
       const user = userDoc.data();
@@ -94,83 +92,79 @@ export async function GET() {
       if (!email || stocks.length === 0) continue;
 
       for (const stock of stocks) {
-        for (const days of TIMEFRAMES) {
-          console.log(`📈 ${stock} | ${days}d analysis`);
+        console.log(`📈 Checking ${stock} (24h)`);
 
-          // 🔥 RSS + Impact filtering
-          const articles = await fetchRSSNews(stock, days);
+        const articles = await fetchRSSNews(stock, ALERT_DAYS);
 
-          if (articles.length === 0) {
-            console.log(`ℹ️ No impact news (${stock}, ${days}d)`);
-            continue;
-          }
+        if (articles.length === 0) {
+          console.log(`ℹ️ No impact news for ${stock}`);
+          continue;
+        }
 
-          const headlines = articles.map(a => a.title);
-          const impactScores = articles.map(a => a.impactScore);
+        const headlines = articles.map(a => a.title);
+        const impactScores = articles.map(a => a.impactScore);
 
-          const sentiment = await analyzeSentiment(
-            headlines,
-            impactScores
-          );
+        const sentiment = await analyzeSentiment(
+          headlines,
+          impactScores
+        );
 
-          console.log("🔍 SENTIMENT", {
-            stock,
-            days,
-            score: sentiment.averageScore,
-            articles: sentiment.articles,
-          });
+        console.log("🔍 RESULT", {
+          stock,
+          score: sentiment.averageScore,
+          articles: sentiment.articles,
+        });
 
-          /* ---------- NEGATIVE ALERT ---------- */
-          if (sentiment.averageScore <= NEGATIVE_SCORE_THRESHOLD) {
-            await transporter.sendMail({
-              from: `"Senta Alerts" <${process.env.EMAIL_USER}>`,
-              to: email,
-              subject: `⚠️ ${stock} Negative Sentiment (${days}d)`,
-              text: `
+        /* ---------- NEGATIVE ALERT ---------- */
+        if (sentiment.averageScore <= NEGATIVE_SCORE_THRESHOLD) {
+          await transporter.sendMail({
+            from: `"Senta Alerts" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `⚠️ ${stock} Negative Sentiment (24h)`,
+            text: `
 🚨 NEGATIVE SENTIMENT ALERT
 
 Stock: ${stock}
-Timeframe: Last ${days} days
+Timeframe: Last 24 hours
 Sentiment score: ${sentiment.averageScore.toFixed(2)}
 Articles analyzed: ${sentiment.articles}
 
-This signal is impact-weighted and time-filtered.
+Signal is impact-weighted & time-filtered.
 
 — Senta Alert System
-              `,
-            });
+            `,
+          });
 
-            console.log(`📧 NEGATIVE alert sent (${stock}, ${days}d)`);
-          }
+          console.log(`📧 Negative alert sent: ${stock}`);
+        }
 
-          /* ---------- POSITIVE ALERT ---------- */
-          if (sentiment.averageScore >= POSITIVE_SCORE_THRESHOLD) {
-            await transporter.sendMail({
-              from: `"Senta Alerts" <${process.env.EMAIL_USER}>`,
-              to: email,
-              subject: `📈 ${stock} Positive Sentiment (${days}d)`,
-              text: `
+        /* ---------- POSITIVE ALERT ---------- */
+        if (sentiment.averageScore >= POSITIVE_SCORE_THRESHOLD) {
+          await transporter.sendMail({
+            from: `"Senta Alerts" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `📈 ${stock} Positive Sentiment (24h)`,
+            text: `
 📈 POSITIVE SENTIMENT ALERT
 
 Stock: ${stock}
-Timeframe: Last ${days} days
+Timeframe: Last 24 hours
 Sentiment score: ${sentiment.averageScore.toFixed(2)}
 Articles analyzed: ${sentiment.articles}
 
-This signal is impact-weighted and time-filtered.
+Signal is impact-weighted & time-filtered.
 
 — Senta Alert System
-              `,
-            });
+            `,
+          });
 
-            console.log(`📧 POSITIVE alert sent (${stock}, ${days}d)`);
-          }
+          console.log(`📧 Positive alert sent: ${stock}`);
         }
       }
     }
 
     return NextResponse.json({
-      status: "Cron sentiment monitoring completed",
+      status: "Cron sentiment scan completed",
     });
   } catch (error) {
     console.error("❌ Cron failed:", error);
