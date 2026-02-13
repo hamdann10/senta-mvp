@@ -1,42 +1,52 @@
-import { pipeline } from "@xenova/transformers";
+import { STOCK_PROFILES } from "@/app/data/stockProfiles";
 
-let scorer: any;
+export function scoreImpact(text: string, stock: string): number {
+  const t = text.toLowerCase();
+  const profile = STOCK_PROFILES[stock];
 
-async function loadModel() {
-  if (!scorer) {
-    scorer = await pipeline(
-      "text2text-generation",
-      "google/flan-t5-base"
-    );
+  let score = 0;
+
+  if (!profile) {
+    // Fallback logic if stock not manually profiled
+    if (t.includes(stock.toLowerCase())) score += 40;
+    if (t.match(/earnings|results|profit|loss|guidance|merger|acquisition/))
+      score += 20;
+    return score;
   }
-  return scorer;
-}
 
-export async function getImpactScore(
-  stock: string,
-  title: string,
-  description: string
-): Promise<number> {
-  const model = await loadModel();
+  /* 🔹 Direct company mention */
+  if (
+    profile.aliases.some(alias =>
+      t.includes(alias.toLowerCase())
+    )
+  ) {
+    score += 60;
+  }
 
-  const prompt = `
-You are a financial analyst.
+  /* 🔹 Company keywords */
+  if (
+    profile.keywords.some(keyword =>
+      t.includes(keyword.toLowerCase())
+    )
+  ) {
+    score += 25;
+  }
 
-Rate the impact of the following news on the stock price of ${stock}.
+  /* 🔹 Sector relevance */
+  if (
+    profile.sectors.some(sector =>
+      t.includes(sector.toLowerCase())
+    )
+  ) {
+    score += 20;
+  }
 
-Score from 0 to 1:
-0 = no impact
-1 = very high impact
+  /* 🔹 Financial triggers */
+  if (
+    t.match(/earnings|results|profit|loss|guidance|margin|stake|dividend/)
+  ) {
+    score += 15;
+  }
 
-News:
-${title}. ${description}
-
-Respond with ONLY a number between 0 and 1.
-`;
-
-  const result = await model(prompt, { max_new_tokens: 5 });
-  const text = result[0].generated_text.trim();
-
-  const score = parseFloat(text);
-  return isNaN(score) ? 0 : Math.max(0, Math.min(1, score));
+  return score;
 }

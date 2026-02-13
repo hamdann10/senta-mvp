@@ -1,17 +1,9 @@
 "use client";
 
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip } from "recharts";
 
 interface SentimentResult {
   sentiment: string;
-  confidence: number;
 }
 
 export default function SentimentSummary({
@@ -19,75 +11,120 @@ export default function SentimentSummary({
 }: {
   results: SentimentResult[];
 }) {
-  if (!results || results.length === 0) return null;
-
-  // Count sentiment distribution
-  const sentimentCounts = results.reduce(
-    (acc, { sentiment }) => {
-      if (sentiment === "positive") acc.positive++;
-      else if (sentiment === "negative") acc.negative++;
-      else acc.neutral++;
-      return acc;
-    },
-    { positive: 0, neutral: 0, negative: 0 }
-  );
-
   const total = results.length;
+
+  if (total === 0) {
+    return (
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl">
+        <h2 className="text-xl font-semibold mb-4">
+          Sentiment Overview
+        </h2>
+        <p className="text-gray-500 text-sm">
+          Run sentiment analysis to see results.
+        </p>
+      </div>
+    );
+  }
+
+  /* ===========================
+     Count Sentiments
+  ============================ */
+
+  let positive = 0;
+  let negative = 0;
+  let neutral = 0;
+
+  results.forEach((r) => {
+    if (r.sentiment === "positive") positive++;
+    else if (r.sentiment === "negative") negative++;
+    else neutral++;
+  });
+
+  const positivePct = (positive / total) * 100;
+  const negativePct = (negative / total) * 100;
+  const neutralPct = (neutral / total) * 100;
+
+  /* ===========================
+     Determine Majority
+  ============================ */
+
+  let majorityLabel = "Neutral";
+  let majorityPct = neutralPct;
+  let majorityColor = "text-yellow-400";
+
+  if (positive > neutral && positive > negative) {
+    majorityLabel = "Bullish";
+    majorityPct = positivePct;
+    majorityColor = "text-green-400";
+  } else if (negative > neutral && negative > positive) {
+    majorityLabel = "Bearish";
+    majorityPct = negativePct;
+    majorityColor = "text-red-400";
+  }
+
   const data = [
-    { name: "Positive", value: sentimentCounts.positive },
-    { name: "Neutral", value: sentimentCounts.neutral },
-    { name: "Negative", value: sentimentCounts.negative },
+    { name: "Positive", value: positive },
+    { name: "Neutral", value: neutral },
+    { name: "Negative", value: negative },
   ];
 
-  const COLORS = ["#22c55e", "#eab308", "#ef4444"]; // green, yellow, red
-
-  const positivePct = ((sentimentCounts.positive / total) * 100).toFixed(1);
-  const neutralPct = ((sentimentCounts.neutral / total) * 100).toFixed(1);
-  const negativePct = ((sentimentCounts.negative / total) * 100).toFixed(1);
+  const COLORS = ["#22c55e", "#facc15", "#ef4444"];
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 shadow-md">
-      <h2 className="text-2xl font-semibold mb-4 text-center">Sentiment Overview</h2>
+    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl">
+      <h2 className="text-xl font-semibold mb-6">
+        Sentiment Overview
+      </h2>
 
-      <div className="flex flex-col md:flex-row justify-center items-center gap-8">
-        {/* Pie Chart */}
-        <div className="w-full md:w-1/2 h-64">
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+      <div className="flex flex-col md:flex-row items-center gap-8">
+
+        {/* Donut Chart */}
+        <div className="relative">
+          <PieChart width={240} height={240}>
+            <Pie
+              data={data}
+              innerRadius={80}
+              outerRadius={110}
+              paddingAngle={3}
+              dataKey="value"
+            >
+              {data.map((_, index) => (
+                <Cell key={index} fill={COLORS[index]} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+
+          {/* Center Display */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="text-3xl font-bold">
+              {majorityPct.toFixed(0)}%
+            </div>
+            <div className={`text-sm font-semibold mt-1 ${majorityColor}`}>
+              {majorityLabel}
+            </div>
+          </div>
         </div>
 
-        {/* Summary Text */}
-        <div className="text-center md:text-left space-y-2">
-          <p className="text-green-400 text-lg font-semibold">
-            Positive: {positivePct}%
-          </p>
-          <p className="text-yellow-400 text-lg font-semibold">
-            Neutral: {neutralPct}%
-          </p>
-          <p className="text-red-400 text-lg font-semibold">
-            Negative: {negativePct}%
-          </p>
+        {/* Stats Panel */}
+        <div className="space-y-3 text-sm w-full md:w-auto">
+          <div className="flex justify-between text-green-400 font-medium">
+            <span>Positive</span>
+            <span>{positivePct.toFixed(1)}%</span>
+          </div>
 
-          <div className="mt-4">
-            <p className="text-gray-300 text-sm italic">
-              Based on {total} analyzed headlines
-            </p>
+          <div className="flex justify-between text-yellow-400 font-medium">
+            <span>Neutral</span>
+            <span>{neutralPct.toFixed(1)}%</span>
+          </div>
+
+          <div className="flex justify-between text-red-400 font-medium">
+            <span>Negative</span>
+            <span>{negativePct.toFixed(1)}%</span>
+          </div>
+
+          <div className="border-t border-gray-800 pt-3 mt-4 text-gray-400 text-xs">
+            Based on {total} analyzed headlines
           </div>
         </div>
       </div>

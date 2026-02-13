@@ -18,34 +18,25 @@ import {
   signOut,
   type User as FirebaseUser,
 } from "firebase/auth";
-import { Trash, Plus, LogOut } from "lucide-react";
-
-/**
- * Profile + Watchlist page
- * - Max 2 stocks (used for background monitoring)
- * - Email from Firebase Auth
- * - WhatsApp number stored for future alerts
- */
+import { Trash, LogOut } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
 
-  // auth
+  /* ================= AUTH ================= */
+
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
 
-  // watchlist
+  /* ================= WATCHLIST ================= */
+
   const [savedStocks, setSavedStocks] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  // whatsapp
-  const [whatsapp, setWhatsapp] = useState("");
-  const [whatsappMsg, setWhatsappMsg] = useState("");
-
-  /* ================= AUTH ================= */
+  /* ================= AUTH LISTENER ================= */
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -63,7 +54,6 @@ export default function ProfilePage() {
     async function load() {
       if (!userId) {
         setSavedStocks([]);
-        setWhatsapp("");
         return;
       }
 
@@ -75,7 +65,6 @@ export default function ProfilePage() {
         if (snap.exists()) {
           const data = snap.data();
           setSavedStocks(Array.isArray(data.savedStocks) ? data.savedStocks : []);
-          setWhatsapp(data.whatsapp ?? "");
         } else {
           await setDoc(ref, {
             createdAt: serverTimestamp(),
@@ -84,7 +73,7 @@ export default function ProfilePage() {
         }
       } catch (err) {
         console.error(err);
-        setMsg("Failed to load profile data.");
+        setMessage("Failed to load profile data.");
       } finally {
         setLoading(false);
       }
@@ -96,22 +85,22 @@ export default function ProfilePage() {
   /* ================= HELPERS ================= */
 
   const requireLogin = () => {
-    setMsg("Please sign in to manage your profile.");
-    setTimeout(() => router.push("/login"), 900);
+    setMessage("Please sign in to manage your profile.");
+    setTimeout(() => router.push("/login"), 800);
   };
 
   const addStock = async (symbol: string) => {
-    setMsg(null);
+    setMessage(null);
 
     if (!userId) return requireLogin();
 
     if (savedStocks.includes(symbol)) {
-      setMsg("Stock already added.");
+      setMessage("Stock already added.");
       return;
     }
 
     if (savedStocks.length >= 2) {
-      setMsg("You can monitor only 2 stocks (used for alerts).");
+      setMessage("Maximum 2 stocks allowed.");
       return;
     }
 
@@ -120,10 +109,10 @@ export default function ProfilePage() {
       const ref = doc(db, "users", userId);
       await updateDoc(ref, { savedStocks: arrayUnion(symbol) });
       setSavedStocks((s) => [...s, symbol]);
-      setMsg(`${symbol} added.`);
+      setMessage(`${symbol} added successfully.`);
     } catch (err) {
       console.error(err);
-      setMsg("Failed to add stock.");
+      setMessage("Failed to add stock.");
     } finally {
       setLoading(false);
     }
@@ -137,25 +126,12 @@ export default function ProfilePage() {
       const ref = doc(db, "users", userId);
       await updateDoc(ref, { savedStocks: arrayRemove(symbol) });
       setSavedStocks((s) => s.filter((x) => x !== symbol));
-      setMsg(`${symbol} removed.`);
+      setMessage(`${symbol} removed.`);
     } catch (err) {
       console.error(err);
-      setMsg("Failed to remove stock.");
+      setMessage("Failed to remove stock.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const saveWhatsapp = async () => {
-    if (!userId || !whatsapp.trim()) return;
-
-    try {
-      const ref = doc(db, "users", userId);
-      await updateDoc(ref, { whatsapp });
-      setWhatsappMsg("WhatsApp number saved successfully.");
-    } catch (err) {
-      console.error(err);
-      setWhatsappMsg("Failed to save WhatsApp number.");
     }
   };
 
@@ -167,89 +143,87 @@ export default function ProfilePage() {
   /* ================= UI ================= */
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 pt-24 pb-12 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-slate-950 text-slate-100 pt-28 pb-16 px-6">
+      <div className="max-w-5xl mx-auto space-y-10">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Page Title */}
+        <div className="flex items-center justify-between">
           <div>
-            <div className="text-xl font-semibold">
-              {displayName ?? "User"}
-            </div>
-            <div className="text-sm text-slate-400">{email}</div>
+            <h1 className="text-2xl font-semibold">Account Settings</h1>
+            <p className="text-sm text-slate-400 mt-1">
+              Manage your monitored stocks and preferences.
+            </p>
           </div>
 
           <button
             onClick={handleLogout}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 transition"
           >
-            <LogOut size={16} /> Logout
+            <LogOut size={16} />
+            Logout
           </button>
         </div>
 
-        <div className="bg-slate-800/60 rounded-2xl p-6 border border-slate-700">
-
-          {/* WhatsApp */}
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-2">Alert Contact</h2>
-            <p className="text-xs text-slate-400 mb-3">
-              Used for WhatsApp sentiment alerts (email comes from login).
-            </p>
-
-            <div className="flex gap-2">
-              <input
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder="+91XXXXXXXXXX"
-                className="flex-1 p-2 bg-slate-900 border border-slate-700 rounded-lg"
-              />
-              <button
-                onClick={saveWhatsapp}
-                className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg"
-              >
-                Save
-              </button>
-            </div>
-
-            {whatsappMsg && (
-              <p className="text-sm text-emerald-400 mt-2">{whatsappMsg}</p>
-            )}
+        {/* Profile Card */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div className="text-lg font-medium">
+            {displayName ?? "User"}
           </div>
+          <div className="text-sm text-slate-400 mt-1">{email}</div>
+        </div>
 
-          {/* Add stock */}
-          <div>
-            <h2 className="text-lg font-semibold mb-2">
-              Monitored Stocks (Max 2)
+        {/* Watchlist Card */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-6">
+
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">
+              Monitored Stocks
             </h2>
 
-            <StockSearch
-              disabled={loading || savedStocks.length >= 2}
-              onSelect={(stock) => addStock(stock.symbol)}
-            />
+            <span className="text-sm text-slate-400">
+              {savedStocks.length} / 2 used
+            </span>
+          </div>
 
-            <p className="text-xs text-slate-400 mt-2 mb-4">
-              Search and add any Indian stock. These stocks are monitored automatically for alerts.
-            </p>
+          {/* Search */}
+          <StockSearch
+            disabled={loading || savedStocks.length >= 2}
+            onSelect={(stock) => addStock(stock.symbol)}
+          />
 
-            {/* Saved stocks */}
+          <p className="text-xs text-slate-500">
+            Add up to 2 Indian stocks. These will be tracked for sentiment alerts.
+          </p>
+
+          {/* Saved Stocks */}
+          {savedStocks.length === 0 ? (
+            <div className="text-sm text-slate-500 border border-dashed border-slate-700 rounded-xl p-6 text-center">
+              No stocks added yet. Search and add your first stock.
+            </div>
+          ) : (
             <div className="flex flex-wrap gap-3">
               {savedStocks.map((s) => (
                 <div
                   key={s}
-                  className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-700 rounded-full"
+                  className="flex items-center gap-3 px-4 py-2 bg-slate-800 border border-slate-700 rounded-full hover:border-slate-600 transition"
                 >
-                  <span>{s}</span>
-                  <button onClick={() => removeStock(s)}>
-                    <Trash size={14} className="text-rose-400" />
+                  <span className="font-medium">{s}</span>
+                  <button
+                    onClick={() => removeStock(s)}
+                    className="text-rose-400 hover:text-rose-300"
+                  >
+                    <Trash size={14} />
                   </button>
                 </div>
               ))}
             </div>
+          )}
 
-            {msg && (
-              <div className="mt-4 text-sm text-amber-300">{msg}</div>
-            )}
-          </div>
+          {message && (
+            <div className="text-sm text-amber-400 mt-2">
+              {message}
+            </div>
+          )}
         </div>
       </div>
     </div>

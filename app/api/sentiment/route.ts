@@ -5,7 +5,7 @@ type SentimentLabel = {
   score: number;
 };
 
-type HuggingFaceResponse = SentimentLabel[][];
+type HuggingFaceBatchResponse = SentimentLabel[][] | SentimentLabel[];
 
 type RequestBody = {
   headlines: string[];
@@ -13,7 +13,6 @@ type RequestBody = {
 
 export async function POST(req: Request) {
   try {
-    // ✅ Properly type request body
     const body = (await req.json()) as RequestBody;
     const { headlines } = body;
 
@@ -32,54 +31,106 @@ export async function POST(req: Request) {
       );
     }
 
-    const model = "ProsusAI/finbert";
-    const apiUrl = `https://router.huggingface.co/hf-inference/models/${model}`;
+    const apiUrl =
+      "https://router.huggingface.co/hf-inference/models/ProsusAI/finbert";
 
-    const responses = await Promise.all(
-      headlines.map(async (headline: string) => {
-        const res = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ inputs: headline }),
-        });
+    /* =========================
+       🔥 SAFE BATCH REQUEST
+    ========================== */
 
-        const data = (await res.json()) as HuggingFaceResponse;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
 
-        // 🛡️ Handle unexpected API response safely
-        if (
-          !Array.isArray(data) ||
-          data.length === 0 ||
-          !Array.isArray(data[0]) ||
-          data[0].length === 0
-        ) {
-          console.warn("Unexpected Hugging Face response:", data);
-          return {
-            headline,
-            sentiment: "unknown",
-            confidence: 0,
-          };
-        }
+    const res = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ inputs: headlines }),
+      signal: controller.signal,
+    });
 
-        // ✅ Find label with highest confidence
-        const topLabel = data[0].reduce(
-          (prev, curr) => (curr.score > prev.score ? curr : prev),
-          data[0][0]
-        );
+    clearTimeout(timeout);
 
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("HF API error:", errorText);
+
+      return NextResponse.json(
+        { error: "Sentiment model request failed" },
+        { status: 500 }
+      );
+    }
+
+    const rawData = await res.json();
+
+    // Model loading edge case
+    if (rawData?.error) {
+      console.error("HF model loading:", rawData.error);
+
+      return NextResponse.json(
+        { error: "Sentiment model still loading. Try again." },
+        { status: 503 }
+      );
+    }
+
+    const data = rawData as HuggingFaceBatchResponse;
+
+    /* =========================
+       🔥 NORMALIZE RESPONSE
+    ========================== */
+
+    const results = headlines.map((headline, index) => {
+      let prediction: SentimentLabel[] | undefined;
+
+      // Case: Proper batch array
+      if (Array.isArray(data) && Array.isArray(data[index])) {
+        prediction = data[index] as SentimentLabel[];
+      }
+
+      // Case: Single array returned (fallback)
+      else if (Array.isArray(data) && index === 0) {
+        prediction = data as SentimentLabel[];
+      }
+
+      if (!prediction || prediction.length === 0) {
         return {
           headline,
-          sentiment: topLabel.label,
-          confidence: topLabel.score,
+          sentiment: "neutral",
+          confidence: 0,
         };
-      })
-    );
+      }
 
-    return NextResponse.json({ results: responses });
-  } catch (error) {
-    console.error("Error analyzing sentiment:", error);
+      const topLabel = prediction.reduce((prev, curr) =>
+        curr.score > prev.score ? curr : prev
+      );
+
+      const normalized = topLabel.label.toLowerCase();
+
+      return {
+        headline,
+        sentiment:
+          normalized === "positive"
+            ? "positive"
+            : normalized === "negative"
+            ? "negative"
+            : "neutral",
+        confidence: Number((topLabel.score ?? 0).toFixed(3)),
+      };
+    });
+
+    return NextResponse.json({ results });
+  } catch (error: any) {
+    if (error.name === "AbortError") {
+      console.error("Sentiment request timeout");
+      return NextResponse.json(
+        { error: "Sentiment request timeout" },
+        { status: 504 }
+      );
+    }
+
+    console.error("Sentiment analysis failed:", error);
     return NextResponse.json(
       { error: "Sentiment analysis failed" },
       { status: 500 }

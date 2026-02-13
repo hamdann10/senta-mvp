@@ -9,97 +9,202 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  Area,
+  AreaChart,
 } from "recharts";
 
 interface SentimentPoint {
   date: string;
-  score: number;
+  score: number; // range: -1 to +1
 }
 
-/**
- * Smooth sentiment data by averaging every N points
- */
-function smoothSentiment(data: SentimentPoint[], windowSize = 5) {
-  const smoothed: SentimentPoint[] = [];
-
-  for (let i = 0; i < data.length; i += windowSize) {
-    const slice = data.slice(i, i + windowSize);
-    const avg =
-      slice.reduce((sum, d) => sum + d.score, 0) / slice.length;
-
-    smoothed.push({
-      date: slice[slice.length - 1].date,
-      score: Number(avg.toFixed(2)),
-    });
-  }
-
-  return smoothed;
-}
-
-export default function SentimentTrend({ data }: { data: SentimentPoint[] }) {
+export default function SentimentTrend({
+  data,
+}: {
+  data: SentimentPoint[];
+}) {
   if (!data || data.length === 0) {
     return (
-      <p className="text-gray-500 text-sm text-center">
-        No sentiment trend data available.
-      </p>
+      <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-xl p-6 shadow-lg">
+        <h2 className="text-xl font-semibold mb-4">Sentiment Trend</h2>
+        <p className="text-gray-500 text-sm text-center py-8">
+          No sentiment trend data available.
+        </p>
+      </div>
     );
   }
 
-  // Smooth the raw sentiment points
-  const processedData = smoothSentiment(data, 5);
+  // Calculate trend stats
+  const latestScore = data[data.length - 1]?.score ?? 0;
+  const firstScore = data[0]?.score ?? 0;
+  const trendDirection = latestScore - firstScore;
+  const highestScore = Math.max(...data.map((d) => d.score));
+  const lowestScore = Math.min(...data.map((d) => d.score));
+
+  const trendLabel =
+    latestScore > 0.1
+      ? "Bullish"
+      : latestScore < -0.1
+      ? "Bearish"
+      : "Neutral";
+
+  const trendColor =
+    latestScore > 0.1
+      ? "text-green-400"
+      : latestScore < -0.1
+      ? "text-red-400"
+      : "text-yellow-400";
+
+  const lineColor =
+    latestScore > 0.1
+      ? "#22c55e"
+      : latestScore < -0.1
+      ? "#ef4444"
+      : "#facc15";
+
+  const arrowIcon = trendDirection > 0 ? "↑" : trendDirection < 0 ? "↓" : "→";
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6 mb-6 shadow-md">
-      <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-center">
-        Sentiment Trend Over Time
-      </h2>
+    <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-xl p-6 shadow-lg">
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-white mb-2">
+          Sentiment Trend Over Time
+        </h2>
+        <div className="flex items-center gap-3">
+          <div
+            className={`text-3xl font-bold ${trendColor}`}
+          >
+            {latestScore.toFixed(2)}
+          </div>
+          <div className="flex flex-col">
+            <span className={`text-sm font-semibold ${trendColor}`}>
+              {trendLabel}
+            </span>
+            <span className="text-xs text-gray-400">
+              {arrowIcon} {Math.abs(trendDirection).toFixed(2)}
+            </span>
+          </div>
+        </div>
+      </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={processedData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+      {/* Chart */}
+      <div className="bg-gray-950/50 rounded-lg p-4 mb-6">
+        <ResponsiveContainer width="100%" height={320}>
+          <AreaChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+            <defs>
+              <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={lineColor} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={lineColor} stopOpacity={0} />
+              </linearGradient>
+            </defs>
 
-          <XAxis
-            dataKey="date"
-            tick={{ fill: "#9ca3af", fontSize: 12 }}
-          />
+            <CartesianGrid
+              strokeDasharray="2 2"
+              stroke="#1f2937"
+              vertical={false}
+              opacity={0.3}
+            />
 
-          <YAxis
-            domain={[-1, 1]}
-            ticks={[-1, 0, 1]}
-            tick={{ fill: "#9ca3af", fontSize: 12 }}
-            label={{
-              value: "Sentiment Score",
-              angle: -90,
-              position: "insideLeft",
-              fill: "#9ca3af",
-            }}
-          />
+            <XAxis
+              dataKey="date"
+              tick={{ fill: "#9ca3af", fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              stroke="none"
+            />
 
-          {/* Neutral baseline */}
-          <ReferenceLine y={0} stroke="#555" strokeDasharray="3 3" />
+            <YAxis
+              domain={[-1, 1]}
+              ticks={[-1, -0.5, 0, 0.5, 1]}
+              tick={{ fill: "#9ca3af", fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              stroke="none"
+            />
 
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#1f2937",
-              border: "none",
-            }}
-            labelStyle={{ color: "#9ca3af" }}
-            formatter={(value: number) => value.toFixed(2)}
-          />
+            {/* Sentiment zones */}
+            <ReferenceLine
+              y={0}
+              stroke="#374151"
+              strokeDasharray="4 4"
+              opacity={0.5}
+            />
+            <ReferenceLine y={0.5} stroke="#22c55e" strokeDasharray="2 2" opacity={0.1} />
+            <ReferenceLine y={-0.5} stroke="#ef4444" strokeDasharray="2 2" opacity={0.1} />
 
-          <Line
-            type="monotone"
-            dataKey="score"
-            stroke="#3b82f6"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 5 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "#0f172a",
+                border: "1px solid #1e293b",
+                borderRadius: "8px",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
+              }}
+              labelStyle={{ color: "#e2e8f0" }}
+              formatter={(value: number) => {
+                const sentiment =
+                  value > 0.1
+                    ? "🟢 Bullish"
+                    : value < -0.1
+                    ? "🔴 Bearish"
+                    : "🟡 Neutral";
+                return [
+                  <span key="value" className="font-semibold">
+                    {sentiment} ({value.toFixed(2)})
+                  </span>,
+                  "Sentiment",
+                ];
+              }}
+              cursor={{ stroke: "#475569", opacity: 0.3 }}
+            />
 
-      <p className="text-center text-xs text-gray-400 mt-2">
-        (–1 = negative · 0 = neutral · +1 = positive)
+            <Area
+              type="monotone"
+              dataKey="score"
+              stroke={lineColor}
+              fill="url(#colorGradient)"
+              strokeWidth={3}
+              dot={{
+                fill: lineColor,
+                r: 4,
+                opacity: 0.8,
+              }}
+              activeDot={{
+                fill: lineColor,
+                r: 7,
+                opacity: 1,
+                filter: `drop-shadow(0 0 8px ${lineColor})`,
+              }}
+              animationDuration={800}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Stats Footer */}
+      <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="bg-gray-800/50 rounded-lg p-2">
+          <p className="text-xs text-gray-400 mb-1">Highest</p>
+          <p className={`font-semibold ${highestScore > 0 ? "text-green-400" : "text-gray-400"}`}>
+            {highestScore.toFixed(2)}
+          </p>
+        </div>
+        <div className="bg-gray-800/50 rounded-lg p-2">
+          <p className="text-xs text-gray-400 mb-1">Current</p>
+          <p className={`font-semibold ${trendColor}`}>
+            {latestScore.toFixed(2)}
+          </p>
+        </div>
+        <div className="bg-gray-800/50 rounded-lg p-2">
+          <p className="text-xs text-gray-400 mb-1">Lowest</p>
+          <p className={`font-semibold ${lowestScore < 0 ? "text-red-400" : "text-gray-400"}`}>
+            {lowestScore.toFixed(2)}
+          </p>
+        </div>
+      </div>
+
+      <p className="text-center text-xs text-gray-500 mt-4">
+        🔴 Bearish (-1) · 🟡 Neutral (0) · 🟢 Bullish (+1)
       </p>
     </div>
   );

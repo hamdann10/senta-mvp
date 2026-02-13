@@ -42,14 +42,14 @@ export default function StockSelector({
   }
 
   return (
-    <div className="mb-6">
-      <label className="block text-sm text-gray-400 mb-2">
+    <div className="mb-4">
+      <label className="block text-sm text-gray-400 mb-1">
         Select Stock
       </label>
       <select
         value={selected}
         onChange={(e) => onSelect(e.target.value)}
-        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white"
+        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white"
       >
         {stocks.map((s) => (
           <option key={s} value={s}>
