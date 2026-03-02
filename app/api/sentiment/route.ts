@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     }
 
     const apiKey = process.env.HUGGINGFACE_API_KEY;
+
     if (!apiKey) {
       return NextResponse.json(
         { error: "Hugging Face API key missing" },
@@ -31,15 +32,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiUrl =
-      "https://router.huggingface.co/hf-inference/models/ProsusAI/finbert";
+    // ✅ Stable endpoint (NOT router)
+    
+      const apiUrl =
+  "https://router.huggingface.co/hf-inference/models/ProsusAI/finbert";
 
-    /* =========================
-       🔥 SAFE BATCH REQUEST
-    ========================== */
 
+    // Limit batch size for stability
+    const limitedHeadlines = headlines.slice(0, 5);
+
+    // Timeout protection
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
     const res = await fetch(apiUrl, {
       method: "POST",
@@ -47,7 +51,10 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ inputs: headlines }),
+      body: JSON.stringify({
+        inputs: limitedHeadlines,
+        options: { wait_for_model: true }, // 🔥 prevents cold start failure
+      }),
       signal: controller.signal,
     });
 
@@ -65,9 +72,8 @@ export async function POST(req: Request) {
 
     const rawData = await res.json();
 
-    // Model loading edge case
     if (rawData?.error) {
-      console.error("HF model loading:", rawData.error);
+      console.error("HF model issue:", rawData.error);
 
       return NextResponse.json(
         { error: "Sentiment model still loading. Try again." },
@@ -77,19 +83,16 @@ export async function POST(req: Request) {
 
     const data = rawData as HuggingFaceBatchResponse;
 
-    /* =========================
-       🔥 NORMALIZE RESPONSE
-    ========================== */
-
-    const results = headlines.map((headline, index) => {
+    // Normalize predictions
+    const results = limitedHeadlines.map((headline, index) => {
       let prediction: SentimentLabel[] | undefined;
 
-      // Case: Proper batch array
+      // Proper batch response
       if (Array.isArray(data) && Array.isArray(data[index])) {
         prediction = data[index] as SentimentLabel[];
       }
 
-      // Case: Single array returned (fallback)
+      // Fallback single response
       else if (Array.isArray(data) && index === 0) {
         prediction = data as SentimentLabel[];
       }
@@ -121,9 +124,11 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ results });
+
   } catch (error: any) {
     if (error.name === "AbortError") {
       console.error("Sentiment request timeout");
+
       return NextResponse.json(
         { error: "Sentiment request timeout" },
         { status: 504 }
@@ -131,6 +136,7 @@ export async function POST(req: Request) {
     }
 
     console.error("Sentiment analysis failed:", error);
+
     return NextResponse.json(
       { error: "Sentiment analysis failed" },
       { status: 500 }

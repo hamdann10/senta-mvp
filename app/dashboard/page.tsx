@@ -3,6 +3,7 @@
 import AuthGuard from "../components/AuthGuard";
 import NewsPreview from "../components/NewsPreview";
 import StockSelector from "../components/StockSelector";
+import CorrelationCard from "../components/CorrelationCard";
 import { useState } from "react";
 
 export default function DashboardPage() {
@@ -47,7 +48,8 @@ export default function DashboardPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-lg">
             <NewsPreview stock={selectedStock} />
           </div>
-
+          {/* 📈 CORRELATION SECTION */}
+          <CorrelationCard stock={selectedStock} />
         </div>
       </div>
     </AuthGuard>
