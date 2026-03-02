@@ -46,15 +46,7 @@ export default function DashboardPage() {
                 onSelect={setSelectedStock}
               />
 
-              <div className="mt-6 flex items-center justify-between text-sm text-gray-400">
-                <span>
-                  Currently tracking:
-                </span>
-
-                <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 font-medium border border-blue-500/20">
-                  {selectedStock}
-                </span>
-              </div>
+             
             </div>
           </section>
 
