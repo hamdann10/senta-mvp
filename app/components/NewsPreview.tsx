@@ -91,7 +91,7 @@ export default function NewsPreview({ stock }: { stock: string }) {
 
   /* ---------------- Get only first 5 sentiments for display & summary & trend ---------------- */
   const displaySentiments = useMemo(() => {
-    return sentiments.slice(0, 5);
+    return sentiments.slice(0, 20);
   }, [sentiments]);
 
   /* ---------------- Trend Logic (using first 5 articles & sentiments) ---------------- */
@@ -100,7 +100,7 @@ export default function NewsPreview({ stock }: { stock: string }) {
 
     const bucketMap: Record<string, { count: number; score: number }> = {};
 
-    articles.slice(0, 5).forEach((article, idx) => {
+    articles.slice(0, 20).forEach((article, idx) => {
       const sentiment = displaySentiments[idx]?.sentiment;
       if (!sentiment) return;
 
@@ -253,7 +253,7 @@ export default function NewsPreview({ stock }: { stock: string }) {
               </p>
             </div>
 
-            {articles.slice(0, 5).map((a, idx) => {
+            {articles.slice(0, 20).map((a, idx) => {
               const sentiment = sentiments[idx]?.sentiment;
 
               const badgeColor =

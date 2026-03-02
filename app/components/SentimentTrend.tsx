@@ -32,6 +32,23 @@ export default function SentimentTrend({
     );
   }
 
+  // 🔥 SIMPLE FIX FOR SINGLE DATA POINT
+  let chartData = [...data];
+
+  if (data.length === 1) {
+    const first = data[0];
+
+    chartData = [
+      {
+        date: new Date(
+          new Date(first.date).getTime() - 24 * 60 * 60 * 1000
+        ).toISOString(),
+        score: first.score,
+      },
+      first,
+    ];
+  }
+
   const latestScore = data[data.length - 1]?.score ?? 0;
   const firstScore = data[0]?.score ?? 0;
   const trendDirection = latestScore - firstScore;
@@ -64,7 +81,6 @@ export default function SentimentTrend({
 
   return (
     <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md space-y-6">
-
       {/* Header */}
       <div>
         <h3 className="text-lg font-semibold">Sentiment Trend</h3>
@@ -92,7 +108,7 @@ export default function SentimentTrend({
       {/* Chart */}
       <div className="bg-gray-950/40 rounded-xl p-4">
         <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={data}>
+          <AreaChart data={chartData}>
             <defs>
               <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={lineColor} stopOpacity={0.25} />

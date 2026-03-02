@@ -32,7 +32,7 @@ async function analyzeSentiment(headlines: string[]) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        inputs: headlines.slice(0, 5),
+        inputs: headlines.slice(0, 20),
         options: { wait_for_model: true, use_cache: true },
       }),
     }

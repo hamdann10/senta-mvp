@@ -65,12 +65,12 @@ const analyzeSentiment = async () => {
 
 // STEP 3: Display (only first 5 articles)
 const displaySentiments = useMemo(() => {
-  return sentiments.slice(0, 5);
+  return sentiments.slice(0, 20);
 }, [sentiments]);
 
 // STEP 4: Calculate Trends (from displayed sentiments)
 const trendData = useMemo(() => {
-  articles.slice(0, 5).forEach((article, idx) => {
+  articles.slice(0, 20).forEach((article, idx) => {
     const sentiment = displaySentiments[idx]?.sentiment;
     // Map to +1 (positive), 0 (neutral), -1 (negative)
     const score =
@@ -220,7 +220,7 @@ const majorityLabel = positive > negative ? "Bullish" : "Bearish";
 
 ```typescript
 // Calculate daily sentiment averages
-const trendData = articles.slice(0, 5).map((article, idx) => {
+const trendData = articles.slice(0, 20).map((article, idx) => {
   const sentiment = displaySentiments[idx]?.sentiment;
   const score =
     sentiment === "positive" ? 1 : sentiment === "negative" ? -1 : 0;
@@ -478,7 +478,7 @@ articles.find(a => a.title === sentiment.headline)
 **Solution:** Create display slice, use consistently
 
 ```typescript
-const displaySentiments = sentiments.slice(0, 5);
+const displaySentiments = sentiments.slice(0, 20);
 // Use displaySentiments for Summary, Trend, Display
 // Use full sentiments for cron monitoring
 ```

@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
 
     // Limit batch size for stability
-    const limitedHeadlines = headlines.slice(0, 5);
+    const limitedHeadlines = headlines.slice(0.20);
 
     // Timeout protection
     const controller = new AbortController();
