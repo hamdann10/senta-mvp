@@ -143,44 +143,54 @@ export default function ProfilePage() {
   /* ================= UI ================= */
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pt-28 pb-16 px-6">
-      <div className="max-w-5xl mx-auto space-y-10">
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-950 to-gray-900 text-white pt-28 pb-16 px-6">
+      <div className="max-w-5xl mx-auto space-y-12">
 
-        {/* Page Title */}
+        {/* ================= HEADER ================= */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Account Settings</h1>
-            <p className="text-sm text-slate-400 mt-1">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Account Settings
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">
               Manage your monitored stocks and preferences.
             </p>
           </div>
 
           <button
             onClick={handleLogout}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 transition"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition"
           >
             <LogOut size={16} />
             Logout
           </button>
         </div>
 
-        {/* Profile Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        {/* ================= PROFILE CARD ================= */}
+        <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 shadow-md space-y-2">
           <div className="text-lg font-medium">
             {displayName ?? "User"}
           </div>
-          <div className="text-sm text-slate-400 mt-1">{email}</div>
+          <div className="text-sm text-gray-400">
+            {email}
+          </div>
         </div>
 
-        {/* Watchlist Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-6">
+        {/* ================= WATCHLIST ================= */}
+        <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-8 shadow-md space-y-8">
 
+          {/* Section Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">
-              Monitored Stocks
-            </h2>
+            <div>
+              <h2 className="text-lg font-semibold">
+                Monitored Stocks
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Add up to 2 Indian stocks for sentiment tracking.
+              </p>
+            </div>
 
-            <span className="text-sm text-slate-400">
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
               {savedStocks.length} / 2 used
             </span>
           </div>
@@ -191,13 +201,9 @@ export default function ProfilePage() {
             onSelect={(stock) => addStock(stock.symbol)}
           />
 
-          <p className="text-xs text-slate-500">
-            Add up to 2 Indian stocks. These will be tracked for sentiment alerts.
-          </p>
-
-          {/* Saved Stocks */}
+          {/* Empty State */}
           {savedStocks.length === 0 ? (
-            <div className="text-sm text-slate-500 border border-dashed border-slate-700 rounded-xl p-6 text-center">
+            <div className="border border-dashed border-gray-700 rounded-xl p-8 text-center text-gray-400 text-sm">
               No stocks added yet. Search and add your first stock.
             </div>
           ) : (
@@ -205,12 +211,15 @@ export default function ProfilePage() {
               {savedStocks.map((s) => (
                 <div
                   key={s}
-                  className="flex items-center gap-3 px-4 py-2 bg-slate-800 border border-slate-700 rounded-full hover:border-slate-600 transition"
+                  className="flex items-center gap-3 px-4 py-2 rounded-full bg-gray-800/70 border border-gray-700 hover:border-gray-600 transition"
                 >
-                  <span className="font-medium">{s}</span>
+                  <span className="font-medium text-gray-200">
+                    {s}
+                  </span>
+
                   <button
                     onClick={() => removeStock(s)}
-                    className="text-rose-400 hover:text-rose-300"
+                    className="text-red-400 hover:text-red-300 transition"
                   >
                     <Trash size={14} />
                   </button>
@@ -219,11 +228,13 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {/* Message Feedback */}
           {message && (
-            <div className="text-sm text-amber-400 mt-2">
+            <div className="text-sm text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg">
               {message}
             </div>
           )}
+
         </div>
       </div>
     </div>

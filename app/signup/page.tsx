@@ -16,7 +16,6 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fallback avatar (uploaded file path — will be transformed by your environment)
   const FALLBACK_AVATAR = "/mnt/data/babcd84a-51da-4384-8ea1-64b131a4e58c.png";
 
   async function handleSubmit(e: React.FormEvent) {
@@ -34,16 +33,17 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      // 1) create auth user
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+
       const user = cred.user;
 
-      // 2) set displayName in Auth profile so user.displayName becomes available
       await updateProfile(user, { displayName: name.trim() });
 
-      // 3) create Firestore user doc (id = uid)
-      const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, {
+      await setDoc(doc(db, "users", user.uid), {
         displayName: name.trim(),
         email: user.email,
         photoURL: user.photoURL ?? FALLBACK_AVATAR,
@@ -51,78 +51,97 @@ export default function SignupPage() {
         createdAt: serverTimestamp(),
       });
 
-      // 4) navigate to profile (or dashboard)
       router.push("/profile");
     } catch (err: any) {
-      console.error("Signup failed", err);
-      // Map common firebase errors to friendly messages
-      if (err?.code === "auth/email-already-in-use") setError("Email already in use.");
-      else if (err?.code === "auth/weak-password") setError("Password is too weak (min 6 chars).");
-      else setError(err?.message ?? "Signup failed. Check console.");
+      if (err?.code === "auth/email-already-in-use")
+        setError("Email already in use.");
+      else if (err?.code === "auth/weak-password")
+        setError("Password is too weak (min 6 characters).");
+      else setError("Signup failed. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-slate-800/60 border border-slate-700 rounded-2xl p-6 shadow-md">
-        <h2 className="text-2xl font-semibold mb-2 text-center">Create your account</h2>
-        <p className="text-sm text-slate-400 mb-6 text-center">Sign up to save watchlists and get alerts.</p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-950 to-gray-900 text-white flex items-center justify-center px-4">
 
-        {error && <div className="mb-4 text-sm text-amber-300 bg-amber-900/10 p-3 rounded">{error}</div>}
+      <div className="w-full max-w-md bg-gray-900/80 border border-gray-800 rounded-2xl p-8 shadow-lg space-y-6">
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-slate-300 mb-1">Full name</label>
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Create your account
+          </h1>
+          <p className="text-sm text-gray-400">
+            Sign up to save watchlists and receive sentiment alerts
+          </p>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+
+          <div className="space-y-1">
+            <label className="text-sm text-gray-300">Full Name</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your full name"
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
               required
+              className="w-full px-4 py-2.5 rounded-lg bg-gray-950 border border-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
 
-          <div>
-            <label className="block text-sm text-slate-300 mb-1">Email</label>
+          <div className="space-y-1">
+            <label className="text-sm text-gray-300">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
               required
+              className="w-full px-4 py-2.5 rounded-lg bg-gray-950 border border-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
 
-          <div>
-            <label className="block text-sm text-slate-300 mb-1">Password</label>
+          <div className="space-y-1">
+            <label className="text-sm text-gray-300">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Choose a secure password"
-              className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
               required
               minLength={6}
+              className="w-full px-4 py-2.5 rounded-lg bg-gray-950 border border-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-60"
+            className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 font-medium transition"
           >
             {loading ? "Creating account..." : "Create account"}
           </button>
 
-          <div className="text-center text-sm text-slate-400">
+          <div className="text-center text-sm text-gray-400">
             Already have an account?{" "}
-            <a href="/login" className="text-sky-300 hover:underline">
+            <a
+              href="/login"
+              className="text-blue-400 hover:text-blue-300 transition"
+            >
               Log in
             </a>
           </div>
+
         </form>
       </div>
     </div>
