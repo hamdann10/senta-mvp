@@ -18,7 +18,7 @@ import { sendWhatsAppAlert } from "@/app/lib/twilio";
 const NEGATIVE_THRESHOLD = -0.1;
 const POSITIVE_THRESHOLD = 0.1;
 const ALERT_DAYS = 1;
-const COOLDOWN_HOURS = 6;
+const COOLDOWN_HOURS = 0;
 
 /* ================= SENTIMENT ================= */
 
