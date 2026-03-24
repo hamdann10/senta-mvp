@@ -156,43 +156,51 @@ export async function GET() {
         /* ===== BEARISH ALERT ===== */
 
         if (score <= NEGATIVE_THRESHOLD) {
-          await sendWhatsAppAlert(
-            phoneNumber,
-            `🚨 SENTA ALERT (Bearish)
+          const sent = await sendWhatsAppAlert(
+  phoneNumber,
+  `🚨 SENTA ALERT (Bearish)
 
 Stock: ${stock}
 Sentiment Score: ${score.toFixed(2)}
 Timeframe: Last 24 hours
 
 Signal crossed bearish threshold.`
-          );
+);
 
-          await updateDoc(doc(db, "users", userDoc.id), {
-            [`lastAlertSent.${stock}`]: now,
-          });
+if (sent) {
+  await updateDoc(doc(db, "users", userDoc.id), {
+    [`lastAlertSent.${stock}`]: now,
+  });
 
-          console.log(`📲 Bearish alert sent for ${stock}`);
+  console.log(`✅ WhatsApp SENT for ${stock}`);
+} else {
+  console.log(`❌ WhatsApp FAILED for ${stock}`);
+}
         }
 
         /* ===== BULLISH ALERT ===== */
 
         if (score >= POSITIVE_THRESHOLD) {
-          await sendWhatsAppAlert(
-            phoneNumber,
-            `📈 SENTA ALERT (Bullish)
+          const sent = await sendWhatsAppAlert(
+  phoneNumber,
+  `📈 SENTA ALERT (Bullish)
 
 Stock: ${stock}
 Sentiment Score: ${score.toFixed(2)}
 Timeframe: Last 24 hours
 
 Signal crossed bullish threshold.`
-          );
+);
 
-          await updateDoc(doc(db, "users", userDoc.id), {
-            [`lastAlertSent.${stock}`]: now,
-          });
+if (sent) {
+  await updateDoc(doc(db, "users", userDoc.id), {
+    [`lastAlertSent.${stock}`]: now,
+  });
 
-          console.log(`📲 Bullish alert sent for ${stock}`);
+  console.log(`✅ WhatsApp SENT for ${stock}`);
+} else {
+  console.log(`❌ WhatsApp FAILED for ${stock}`);
+}
         }
       }
     }
